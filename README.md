@@ -39,7 +39,7 @@ be installed to read from the HDF5 file and perform plotting.
 
 All commands necessary to run the simulation, including the installation
 of additional packages, can be found in the Jupyter notebook 
-(`pc_synchrony_simulation.ipynb`). Note that you do not need to install
+(`pc_model.ipynb`). Note that you do not need to install
 Jupyter to run these commands. Rather, these commands can be copy-and-pasted
 directly into a Julia terminal in the order seen in the notebook.
 

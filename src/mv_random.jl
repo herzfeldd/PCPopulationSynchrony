@@ -41,6 +41,67 @@ function _Phi(x, y, ρ)
 end
 
 """
+    find_root_in_bounds(fxn, bounds)
+
+Attempts to find the root (zero crossing) of an objective function when
+the inputs to the function are bounded. The lower bound is specified
+in the 1st position of bounds and the upper bound for the input to the
+function are specified in the second position of bounds.
+
+The optional parameter, x_tol, specifies the tolerance for the input to
+the function. When the change in the input parameter is smaller than this
+toleance, we return the found root. By default, this is 1E-6.
+
+An optional parameter, lower_bound_positive, speeds the computation if
+the user already knows that the lower bound has evaluated above zero.
+By default this is nothing, and during the first set of find_root_in_bounds,
+the function will determine whether the lower bound returns a positive or
+negative function value.
+
+The function finds the roots by continually diving the passed input range
+in half. If we imagine that the lower bound returns a positive value and
+the upper bound returns a negative value, we know the zero is somewhere
+between upper and lower bound. We can test the input point halfway between
+these two bound limits. If the answer is negative at this half-way point,
+we know the zero lies between [halfway, upper-bound] whereas if the
+half-way point is positive, we know the zero lies between [lower-bound, halfway].
+"""
+function find_root_in_bounds(fxn::Function, bounds::Tuple{<:Real, <:Real}; x_tol::Real=1e-6, lower_bound_positive::Union{Bool, Nothing}=nothing, verbose::Bool=false)
+    @assert bounds[2] > bounds[1]
+    if lower_bound_positive == nothing
+        # Determine the signs of our upper and lower bounds
+        lower_bound_value = fxn(bounds[1])
+        upper_bound_value = fxn(bounds[2])
+        @assert sign(upper_bound_value) != sign(lower_bound_value)
+        lower_bound_positive = (lower_bound_value >= 0)
+    end
+
+    # Divide our range in half and test the value at the halfway point
+    halfway_bound_delta = (bounds[2] - bounds[1]) / 2.0;
+    halfway_bound = bounds[1] + halfway_bound_delta
+    if halfway_bound_delta < x_tol # Our change in the x parameter is less than our tolerance, return
+        return halfway_bound
+    end
+    halfway_bound_value = fxn(halfway_bound)
+    verbose && println(" fxn($halfway_bound) = $halfway_bound_value")
+    if (lower_bound_positive && halfway_bound_value < 0) || (lower_bound_positive == false && halfway_bound_value > 0)
+        # lower bound (+), halfway bound (-), upper_bound (-)
+        #  -- or --
+        # lower bound (-), halfway bound 60(+), upper_bound (+
+        # Root is between lower bound and half-way bound
+        return find_root_in_bounds(fxn, (bounds[1], halfway_bound), x_tol=x_tol, lower_bound_positive=lower_bound_positive, verbose=verbose)
+    else
+        # lower bound (+), halfway bound (+), upper_bound (-)
+        #  -- or --
+        # lower bound (-), halway bound (-), upper_bound (+)
+        # Root is between halfway bound and upper bound
+        return find_root_in_bounds(fxn, (halfway_bound, bounds[2]), x_tol=x_tol, lower_bound_positive=(halfway_bound_value > 0), verbose=verbose)
+    end
+end
+
+
+
+"""
     estimate_multivariate_distribution(firing_rates, [covariance_matrix, dt])
 
 Given a set of neuron firing rates, construct a multivariate Gaussian distribution
@@ -72,9 +133,9 @@ function estimate_multivariate_distribution(firing_rates::AbstractVector{<:Real}
         for j = i+1:length(simulated_gammas)
             fxn = lambda -> _Phi(simulated_gammas[i], simulated_gammas[j], lambda) - rs[i] * rs[j] - covariance_matrix[i, j]
             try
-                simulated_covariance[i, j] = MovementToolbox.find_root_in_bounds(fxn, (-1, 1), verbose=false)
+                simulated_covariance[i, j] = find_root_in_bounds(fxn, (-1, 1), verbose=false)
             catch e
-                simulated_covariance[i, j] = 0.0
+                simulated_covariance[i, j] = 0
                 @warn e maxlog=1
             end
             simulated_covariance[j, i] = simulated_covariance[i, j]
