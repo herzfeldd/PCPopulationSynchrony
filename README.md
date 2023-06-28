@@ -1,5 +1,7 @@
 # Simulating the effect of PC synchrony on downstream neurons
 
+[![DOI](https://zenodo.org/badge/603425694.svg)](https://zenodo.org/badge/latestdoi/603425694)
+
 ## Overview
 The code in this repository seeks to understand the effect of non-zero
 covariance (synchronous firing) in a population of Purkinje cells on 
